@@ -11,32 +11,34 @@
 	};
 
 	bender.test( {
-		'test create link': function() {
-			// TODO: focus is required in Firefox with inline creator.
-			if ( CKEDITOR.env.gecko && this.editor.elementMode == CKEDITOR.ELEMENT_MODE_INLINE )
-				assert.ignore();
-
+		// #8275
+		'test create link (without editor focus)': function() {
 			var bot = this.editorBot;
+
+			// Make sure that the focus is not in the editor.
+			CKEDITOR.document.getById( 'blurTarget' ).focus();
+
 			bot.dialog( 'link', function( dialog ) {
 				// Should auto trim leading spaces. (#6845)
 				dialog.setValueOf( 'info', 'url', ' ckeditor.com' );
 				dialog.getButton( 'ok' ).click();
 
-				// TODO: For weird reason this's needed for IE.
-				CKEDITOR.env.ie && CKEDITOR.document.getById( 'blurTarget' ).focus();
 				assert.areEqual( '<a href="http://ckeditor.com">http://ckeditor.com</a>', bot.getData( true ) );
 			} );
 		},
 
 		'test create link (with editor focus)': function() {
 			var bot = this.editorBot;
-			bot.editor.focus();
 
-			bot.dialog( 'link', function( dialog ) {
-				dialog.setValueOf( 'info', 'url', 'ckeditor.com' );
-				dialog.getButton( 'ok' ).click();
+			bot.setData( '', function() {
+				bot.editor.focus();
 
-				assert.areEqual( '<a href="http://ckeditor.com">http://ckeditor.com</a>', bot.getData( true ) );
+				bot.dialog( 'link', function( dialog ) {
+					dialog.setValueOf( 'info', 'url', 'ckeditor.com' );
+					dialog.getButton( 'ok' ).click();
+
+					assert.areEqual( '<a href="http://ckeditor.com">http://ckeditor.com</a>', bot.getData( true ) );
+				} );
 			} );
 		},
 
@@ -66,8 +68,7 @@
 		},
 
 		'test edit link (text selected)': function() {
-			var bot = this.editorBot,
-				editor = this.editor;
+			var bot = this.editorBot;
 
 			bot.setHtmlWithSelection( '<a href="http://cksource.com" name="test">[foo]</a>' );
 
@@ -176,9 +177,11 @@
 		},
 
 		'test empty anchor passes filter': function() {
+			// jscs:disable maximumLineLength
 			var matchRegex = CKEDITOR.env.ie && CKEDITOR.env.version == 8 ?
 				/^<p><img alt="[^"]+" class="cke_anchor" data-cke-real-element-type="anchor" data-cke-real-node-type="1" data-cke-realelement="[^"]+" src="data:image[^"]+" title="[^"]+" \/><\/p>$/ :
 				/^<p><img align="" alt="[^"]+" class="cke_anchor" data-cke-real-element-type="anchor" data-cke-real-node-type="1" data-cke-realelement="[^"]+" src="data:image[^"]+" title="[^"]+" \/>(<br \/>)?<\/p>$/;
+			// jscs:enable maximumLineLength
 
 			this.editorBot.assertInputOutput(
 				'<p><a name="#idid"></a></p>',
@@ -225,6 +228,57 @@
 				// Assert selected text only because, depending on the browser,
 				// selection is <a>[b]</a> or [<a>b</a>].
 				assert.areSame( 'b', editor.getSelection().getSelectedText(), 'Link selected' );
+			} );
+		},
+
+		// #13887
+		'test link target special chars': function() {
+			var bot = this.editorBot;
+
+			bot.setHtmlWithSelection( '<a href="http://ckeditor.com">[foo]</a>' );
+
+			bot.dialog( 'link', function( dialog ) {
+				var funnyTargetValue = 'foo-b!ar^$`*(';
+
+				dialog.setValueOf( 'target', 'linkTargetType', 'frame' );
+				dialog.setValueOf( 'target', 'linkTargetName', funnyTargetValue );
+
+				dialog.getButton( 'ok' ).click();
+
+				assert.areSame( '<a href="http://ckeditor.com" target="' + funnyTargetValue + '">foo</a>', bot.getData( true ) );
+			} );
+		},
+
+		'test link target keywords': function() {
+			var bot = this.editorBot;
+
+			bot.setHtmlWithSelection( '<a href="http://ckeditor.com">[foo]</a>' );
+
+			bot.dialog( 'link', function( dialog ) {
+				dialog.setValueOf( 'target', 'linkTargetType', 'frame' );
+				dialog.setValueOf( 'target', 'linkTargetName', '_self' );
+
+				dialog.getButton( 'ok' ).click();
+
+				assert.areSame( '<a href="http://ckeditor.com" target="_self">foo</a>', bot.getData( true ) );
+			} );
+		},
+
+		// #5278
+		'test link target with space': function() {
+			var bot = this.editorBot;
+
+			bot.setHtmlWithSelection( '<a href="http://ckeditor.com">[foo]</a>' );
+
+			bot.dialog( 'link', function( dialog ) {
+				var funnyTargetValue = ' foo bar';
+
+				dialog.setValueOf( 'target', 'linkTargetType', 'frame' );
+				dialog.setValueOf( 'target', 'linkTargetName', funnyTargetValue );
+
+				dialog.getButton( 'ok' ).click();
+
+				assert.areSame( '<a href="http://ckeditor.com" target="foobar">foo</a>', bot.getData( true ) );
 			} );
 		}
 	} );

@@ -36,7 +36,6 @@
 				name: 'editor3',
 				creator: 'inline'
 			}, function( bot ) {
-				var editor = bot.editor
 				bot.setHtmlWithSelection( '<strong>[aaa]</strong> bbb' );
 
 				bot.contextmenu( function() {
@@ -58,7 +57,8 @@
 				name: 'editor4',
 				config: {
 					allowedContent: true
-			} }, function( bot ) {
+				}
+			}, function( bot ) {
 				bot.setData( html, function() {
 					var editor = bot.editor,
 						editable = editor.editable(),
@@ -67,6 +67,9 @@
 						nonEditable = doc.getById( 'a' ),
 						nestedEditable = doc.getById( 'b' ),
 						preventDefaultCalled = 0;
+
+					// #13910
+					editor.focus();
 
 					editable.fire( 'contextmenu', new CKEDITOR.dom.event( {
 						target: nonEditable.$,
